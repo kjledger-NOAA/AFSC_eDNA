@@ -1,0 +1,264 @@
+---
+title: "blastn taxonomic analysis"
+author: "Kimberly Ledger"
+date: "2023-04-06"
+output: html_document
+---
+
+taxonomic id of blastn output. this code is useful for assigning higher classifications (genus, family, etc) for ASVs that have multispecies hits.   
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load-libraries}
+library(dplyr)
+library(tidyr)
+library(stringr)
+```
+
+
+## load output from taxonkit 
+```{r load-output-from-taxonkit}
+taxonomy <-read.delim("/genetics/edna/workdir/salmon_id/20230406/trimmed/filtered/outputs/blastn_taxlineage.txt", header = FALSE, na.strings=c(""," ","NA"))
+
+head(taxonomy)
+```
+
+## clean up the header a bit
+```{r}
+# use the full taxonomy rather than the seq id to collapse identical entries
+tax_df <- taxonomy %>%
+  filter(V4 > 100) %>% # make sure all retained matches are >100 bp
+  select(-V2, -V5, -V6, -V7, -V14, -V8, -V9, -V10, -V11, -V12, -V15, -V16) %>%  #remove unnecessary columns
+  group_by(V1, V17) %>% # group by the sequence key and the full taxonomy to reduce duplicate entries
+  unique() %>% # doing that reduced the number of entries from 146k to 17k
+  rename(qseqid=V1, perc_id=V3, length=V4, sscinames=V13, taxonomy=V17) %>% #rename headers
+  filter(!str_detect(sscinames, "environmental")) %>% # filter out any environmental samples
+  filter(!str_detect(sscinames, "synthetic")) #%>% # filter out any synthetic "samples"
+```
+
+## calcualate the number of ASV's with taxonomic assignment
+```{r how-many-total-ASVs-w-taxonomy}
+tax_df %>% 
+  ungroup() %>%
+  select(qseqid) %>%
+  unique() %>%
+  nrow
+```
+
+## reformat table 
+```{r}
+# formatting the taxonomy variables
+taxon_df <- tax_df %>%
+  filter(str_detect(taxonomy, ";")) %>%
+  separate(taxonomy, into=c("kingdom", "phylum", "class", "order", "family", "genus", "species"), sep = ";")
+```
+
+
+# Sort and clean-up the results based on % identity
+
+## find species that include numbers or "sp."
+```{r}
+taxon_df %>%
+  filter(str_detect(sscinames, " x "))
+```
+
+
+## figure out what ASVs are unambiguously a single species
+
+```{r}
+single_spp_seqs <- taxon_df %>% 
+  group_by(qseqid) %>%
+  add_tally(name = "n_taxa") %>%
+  filter(n_taxa == 1)
+```
+
+## remove the single-species seqs from the dataframe and then rank the hits by % identity for the remaining seqs
+
+```{r}
+seq_id_diff <- taxon_df %>%
+  anti_join(., single_spp_seqs) %>%  ## comment out this line if there are no single species ASVs
+  select(-length) %>%
+  group_by(qseqid, species, genus, family, order, class, phylum, kingdom) %>%
+    mutate(seq_percID = max(perc_id)) %>%
+    group_by(qseqid, species, genus, family, order, class, phylum, kingdom, seq_percID) %>%
+  summarise(max(seq_percID)) %>% # take just the top hit for each taxon (for each sequence)
+  select(-`max(seq_percID)`) %>%
+  ungroup() %>%
+  group_by(qseqid) %>%
+      mutate(id_rank = rank(desc(seq_percID), ties.method = "min")) %>% # rank the taxonomic hits per sequence by % id
+       mutate(top_perc = max(seq_percID)) %>% # designate the highest % id for the best taxonomic hit in each sequence (in some, but not all cases, this is 100%)   
+      mutate(diff = top_perc - seq_percID) %>% # calculate the difference between the % identity of the top hit and each subsequent taxonomic hit
+        arrange(diff)
+
+seq_id_diff %>%
+  filter(diff > 0)
+```
+
+Now you have the single best entry for each species for each sequence ranked and with the difference between the first and second ranked entries calculated.
+
+For sequences with multiple top hits, where the difference between ranked taxa = 0, you will end up defaulting to genus- or family-level ID. We'll do the same for any sequences where the difference betweeen the first and second ranked taxa is < 2%.
+
+## Figure out which differences are > 2% and eliminate those first
+```{r}
+# filter out any taxa that are >2% less matching identity than the top taxonomic hit for a given sequence
+to_remove_low_perc_hits <- seq_id_diff %>%
+  ungroup() %>%
+  group_by(qseqid) %>%
+  filter(diff > 2)
+
+keepers <- seq_id_diff %>%
+  anti_join(to_remove_low_perc_hits)
+```
+
+## so now determine whether ASVs should be assigned to genus, family, order, etc. 
+```{r}
+singletons <- keepers %>%
+  select(qseqid) %>%
+  tally() %>%
+  filter(n == 1)
+
+# these are the seqs that now have only a single match
+singleton_df <- singletons %>%
+  left_join(keepers) %>%
+  select(-n) %>%
+  bind_rows(single_spp_seqs) %>% # combine the single spp data
+  mutate(taxonomic_level = "species") %>%
+  mutate(taxon = species)
+
+## Genus-level matches
+# remove the singletons from the bigger df 
+single_genus <- keepers %>%
+  anti_join(singleton_df)%>% # at best, these should be genus-level matches
+  group_by(qseqid, genus) %>%
+  tally() %>%
+  ungroup() %>%
+  group_by(qseqid) %>%
+  tally() %>%
+  filter(n == 1) %>% # seqs that match a single genus
+  select(-n) %>%
+  left_join(., keepers) %>%
+  mutate(taxonomic_level = "genus") %>%
+  mutate(taxon = genus)
+  
+
+## Family-level matches
+single_family <- keepers %>%
+  anti_join(singleton_df)%>%
+  anti_join(single_genus) %>%
+  group_by(qseqid, family) %>%
+  tally() %>%
+  ungroup() %>%
+  group_by(qseqid) %>%
+  tally() %>%
+  filter(n == 1) %>% # seqs that match a single family
+  select(-n) %>%
+  left_join(., keepers) %>%
+  mutate(taxonomic_level = "family") %>%
+  mutate(taxon = family)
+
+
+## Order-level matches
+single_order <- keepers %>%
+  anti_join(singleton_df)%>%
+  anti_join(single_genus) %>%
+  anti_join(single_family) %>%
+  group_by(qseqid, order) %>%
+  tally() %>%
+  ungroup() %>%
+  group_by(qseqid) %>%
+  tally() %>%
+  filter(n == 1) %>% # seqs that match a single order
+  select(-n) %>%
+  left_join(., keepers) %>%
+  mutate(taxonomic_level = "order") %>%
+  mutate(taxon = order)
+
+
+## Class-level matches
+single_class <- keepers %>%
+  anti_join(singleton_df)%>%
+  anti_join(single_genus) %>%
+  anti_join(single_family) %>%
+  anti_join(single_order) %>%
+  group_by(qseqid, class) %>%
+  tally() %>%
+  ungroup() %>%
+  group_by(qseqid) %>%
+  tally() %>% 
+  filter(n == 1) %>% # seqs that match a single class
+  select(-n) %>%
+  left_join(., keepers) %>%
+  mutate(taxonomic_level = "class") %>%
+  mutate(taxon = class)
+
+
+## Phylum-level matches
+single_phylum <- keepers %>%
+  anti_join(singleton_df)%>%
+  anti_join(single_genus) %>%
+  anti_join(single_family) %>%
+  anti_join(single_order) %>%
+  anti_join(single_class) %>%
+  group_by(qseqid, phylum) %>%
+  tally() %>%
+  ungroup() %>%
+  group_by(qseqid) %>%
+  tally() %>% 
+  filter(n == 1) %>% # seqs that match a single phylum
+  select(-n) %>%
+  left_join(., keepers) %>%
+  mutate(taxonomic_level = "phylum") %>%
+  mutate(taxon = phylum)
+
+# Kingdom level matches
+single_kingdom <- keepers %>%
+  anti_join(singleton_df)%>%
+  anti_join(single_genus) %>%
+  anti_join(single_family) %>%
+  anti_join(single_order) %>%
+  anti_join(single_class) %>%
+  group_by(qseqid, kingdom) %>%
+  tally() %>%
+  ungroup() %>%
+  group_by(qseqid) %>%
+  tally() %>% 
+  filter(n == 1) %>% # seqs that match a single kingdom
+  select(-n) %>%
+  left_join(., keepers) %>%
+  mutate(taxonomic_level = "kingdom") %>%
+  mutate(taxon = kingdom)
+```
+
+## modify the singleton_df to include the right variable headers
+```{r}
+single_spp <- singleton_df %>%
+  select(-perc_id, -length, -sscinames, -n_taxa) %>%
+  mutate(taxonomic_level = "species") %>%
+  mutate(taxon = species)
+```
+
+## recombine the full data set now that the appropriate level of taxonomy has been determined
+
+```{r}
+sorted_tax_df <- bind_rows(single_kingdom, single_phylum, single_class, single_order, single_family, single_genus, single_spp)
+```
+
+## Create output taxonomy data frames
+```{r}
+uncollapsed_taxonomy <- sorted_tax_df %>%
+  select(-top_perc, -id_rank) %>%
+  unique()
+
+# and then collapse that down to just a single taxon per ASV
+collapsed_taxonomy <- uncollapsed_taxonomy %>%
+  select(qseqid, taxon, taxonomic_level) %>%
+  unique() %>%
+  rename(ASV = qseqid)
+```
+
+
+```{r}
+write.csv(collapsed_taxonomy, "/genetics/edna/workdir/salmon_id/20230406/trimmed/filtered/outputs/asv_taxonomy_blastn.csv")
+```

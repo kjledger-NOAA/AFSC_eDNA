@@ -1,0 +1,115 @@
+---
+title: "analysis of salmon samples using cytB primers"
+author: "Kimberly Ledger"
+date: "2023-04-09"
+output: html_document
+---
+
+data from miseq run 6 April 2023 - salmon ID using cytB 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+load libraries
+```{r, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+```
+
+read in taxonomic identification table - from BLASTN assignmnet
+```{r}
+taxons_blast <- read.csv("/genetics/edna/workdir/salmon_id/20230406/trimmed/filtered/outputs/asv_taxonomy_blastn.csv", row.names = 1) %>%
+  rename(taxon_blast = taxon) %>%
+  rename(rank_blast = taxonomic_level)
+```
+
+
+read in samples by asv table
+```{r}
+asv_table <- read.csv("/genetics/edna/workdir/salmon_id/20230406/trimmed/filtered/outputs/ASVtable.csv") %>%
+  rename(SampleID = X)
+```
+
+join taxon and asv table
+```{r}
+read_summary <- asv_table %>%
+  pivot_longer(cols = starts_with("ASV"), names_to = "ASV", values_to = "count") %>%
+  left_join(taxons_blast, by = "ASV") %>%
+  filter(count > 0) %>%
+  filter(taxon_blast != "NA") %>%
+  group_by(SampleID, taxon_blast) %>%
+  summarise(total_read_count = sum(count)) %>%
+  pivot_wider(names_from = "taxon_blast", values_from = "total_read_count") %>%
+  replace(is.na(.), 0)
+```
+
+pivot longer -- **remember to change column numbers when using new data sets** 
+```{r}
+read_summary_long <- read_summary %>%
+  pivot_longer(cols = 2:5, names_to = "taxon", values_to = "reads") %>%
+  mutate(reads = ifelse(is.na(reads), 0, reads))
+```
+
+
+read in bottom trawl metadata and join  
+6April run used same samples as 16Feb run so i'll just use the same metadata
+```{r}
+read_summary_split <- read_summary_long %>%
+  separate(SampleID, sep = "-", into =c("project", "primer", "sampleID"))
+```
+
+
+## plot read counts 
+```{r}
+read_summary_split %>%
+  ggplot(aes(x= sampleID, y = reads, fill = taxon)) +
+  geom_bar(stat = "identity") + 
+  theme_bw() +
+  labs(
+    y = "sequencing reads",
+    x = "taxon",
+    title = "assigned reads") + 
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 0.95),
+    legend.text = element_text(size = 8),
+    legend.key.size = unit(0.3, "cm"),
+    legend.position = "right",
+    legend.title = element_blank()
+  )
+```
+
+## plot read proportions
+```{r}
+read_summary_split %>%
+  group_by(sampleID) %>%
+  mutate(sum=sum(reads)) %>%
+  mutate(prop = reads/sum) %>%
+  ggplot(aes(x= sampleID, y = prop, fill = taxon)) +
+  geom_bar(stat = "identity") + 
+  theme_bw() +
+  labs(
+    y = "proportion of sequencing reads",
+    x = "taxon",
+    title = "proportion of assigned reads") + 
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 0.95),
+    legend.text = element_text(size = 8),
+    legend.key.size = unit(0.3, "cm"),
+    legend.position = "right",
+    legend.title = element_blank()
+  )
+```
+
+```{r}
+library(rmarkdown)
+
+f <- function() {
+  paged_table(read_summary)
+}
+
+f()
+```
+
+
+
