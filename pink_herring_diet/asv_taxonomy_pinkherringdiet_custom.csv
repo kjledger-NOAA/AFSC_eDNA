@@ -1,0 +1,61 @@
+representative,ASV_num,taxon,rank,kingdom,phylum,class,order,family,genus,species
+ASV1,1,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV2,2,Oncorhynchus,genus,Metazoa,Chordata,Actinopteri,Salmoniformes,Salmonidae,Oncorhynchus,
+ASV3,3,Sebastes,genus,Metazoa,Chordata,Actinopteri,Perciformes,Sebastidae,Sebastes,
+ASV4,4,Oncorhynchus,genus,Metazoa,Chordata,Actinopteri,Salmoniformes,Salmonidae,Oncorhynchus,
+ASV5,5,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV6,6,Gadus,genus,Metazoa,Chordata,Actinopteri,Gadiformes,Gadidae,Gadus,
+ASV7,7,Pleuronectidae,family,Metazoa,Chordata,Actinopteri,Pleuronectiformes,Pleuronectidae,,
+ASV8,8,Leuroglossus schmidti,species,Metazoa,Chordata,Actinopteri,Argentiniformes,Bathylagidae,Leuroglossus,Leuroglossus schmidti
+ASV9,9,Oncorhynchus,genus,Metazoa,Chordata,Actinopteri,Salmoniformes,Salmonidae,Oncorhynchus,
+ASV10,10,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV11,11,Sebastes,genus,Metazoa,Chordata,Actinopteri,Perciformes,Sebastidae,Sebastes,
+ASV12,12,Acipenser fulvescens,species,Metazoa,Chordata,Actinopteri,Acipenseriformes,Acipenseridae,Acipenser,Acipenser fulvescens
+ASV13,13,Leuroglossus schmidti,species,Metazoa,Chordata,Actinopteri,Argentiniformes,Bathylagidae,Leuroglossus,Leuroglossus schmidti
+ASV14,14,Sebastes,genus,Metazoa,Chordata,Actinopteri,Perciformes,Sebastidae,Sebastes,
+ASV15,15,Gadus,genus,Metazoa,Chordata,Actinopteri,Gadiformes,Gadidae,Gadus,
+ASV16,16,Stichaeus punctatus,species,Metazoa,Chordata,Actinopteri,Perciformes,Stichaeidae,Stichaeus,Stichaeus punctatus
+ASV17,17,Aptocyclus ventricosus,species,Metazoa,Chordata,Actinopteri,Perciformes,Cyclopteridae,Aptocyclus,Aptocyclus ventricosus
+ASV18,18,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV19,19,Gadus,genus,Metazoa,Chordata,Actinopteri,Gadiformes,Gadidae,Gadus,
+ASV20,20,Gadus,genus,Metazoa,Chordata,Actinopteri,Gadiformes,Gadidae,Gadus,
+ASV21,21,Zaprora silenus,species,Metazoa,Chordata,Actinopteri,Perciformes,Zaproridae,Zaprora,Zaprora silenus
+ASV22,22,Sebastes,genus,Metazoa,Chordata,Actinopteri,Perciformes,Sebastidae,Sebastes,
+ASV23,23,Gadus,genus,Metazoa,Chordata,Actinopteri,Gadiformes,Gadidae,Gadus,
+ASV24,24,Anoplarchus,genus,Metazoa,Chordata,Actinopteri,Perciformes,Stichaeidae,Anoplarchus,
+ASV25,25,Bathymaster,genus,Metazoa,Chordata,Actinopteri,Perciformes,Bathymasteridae,Bathymaster,
+ASV26,26,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV27,27,Sebastes,genus,Metazoa,Chordata,Actinopteri,Perciformes,Sebastidae,Sebastes,
+ASV28,28,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV29,29,Cottidae,family,Metazoa,Chordata,Actinopteri,Perciformes,Cottidae,,
+ASV30,30,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV31,31,Stichaeidae,family,Metazoa,Chordata,Actinopteri,Perciformes,Stichaeidae,,
+ASV32,32,Osmeridae,family,Metazoa,Chordata,Actinopteri,Osmeriformes,Osmeridae,,
+ASV33,33,Ammodytes,genus,Metazoa,Chordata,Actinopteri,Uranoscopiformes,Ammodytidae,Ammodytes,
+ASV34,34,Leuroglossus schmidti,species,Metazoa,Chordata,Actinopteri,Argentiniformes,Bathylagidae,Leuroglossus,Leuroglossus schmidti
+ASV35,35,Anoplarchus,genus,Metazoa,Chordata,Actinopteri,Perciformes,Stichaeidae,Anoplarchus,
+ASV36,36,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV37,37,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV38,38,Sebastes,genus,Metazoa,Chordata,Actinopteri,Perciformes,Sebastidae,Sebastes,
+ASV39,39,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV40,40,Gadus,genus,Metazoa,Chordata,Actinopteri,Gadiformes,Gadidae,Gadus,
+ASV41,41,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV42,42,Artedius harringtoni,species,Metazoa,Chordata,Actinopteri,Perciformes,Cottidae,Artedius,Artedius harringtoni
+ASV43,43,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV44,44,Bathymaster,genus,Metazoa,Chordata,Actinopteri,Perciformes,Bathymasteridae,Bathymaster,
+ASV45,45,Mallotus villosus,species,Metazoa,Chordata,Actinopteri,Osmeriformes,Salangidae,Mallotus,Mallotus villosus
+ASV46,46,Xiphister,genus,Metazoa,Chordata,Actinopteri,Perciformes,Stichaeidae,Xiphister,
+ASV47,47,Sebastes,genus,Metazoa,Chordata,Actinopteri,Perciformes,Sebastidae,Sebastes,
+ASV48,48,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV50,50,Oncorhynchus,genus,Metazoa,Chordata,Actinopteri,Salmoniformes,Salmonidae,Oncorhynchus,
+ASV51,51,Pleuronectidae,family,Metazoa,Chordata,Actinopteri,Pleuronectiformes,Pleuronectidae,,
+ASV52,52,Pleuronectidae,family,Metazoa,Chordata,Actinopteri,Pleuronectiformes,Pleuronectidae,,
+ASV53,53,Stichaeidae,family,Metazoa,Chordata,Actinopteri,Perciformes,Stichaeidae,,
+ASV54,54,Leuroglossus schmidti,species,Metazoa,Chordata,Actinopteri,Argentiniformes,Bathylagidae,Leuroglossus,Leuroglossus schmidti
+ASV55,55,Gasterosteus aculeatus,species,Metazoa,Chordata,Actinopteri,Perciformes,Gasterosteidae,Gasterosteus,Gasterosteus aculeatus
+ASV56,56,Ronquilus jordani,species,Metazoa,Chordata,Actinopteri,Perciformes,Bathymasteridae,Ronquilus,Ronquilus jordani
+ASV57,57,Hemilepidotus,genus,Metazoa,Chordata,Actinopteri,Perciformes,Cottidae,Hemilepidotus,
+ASV58,58,Hexagrammos,genus,Metazoa,Chordata,Actinopteri,Perciformes,Hexagrammidae,Hexagrammos,
+ASV59,59,Sebastes,genus,Metazoa,Chordata,Actinopteri,Perciformes,Sebastidae,Sebastes,
+ASV60,60,Clupea pallasii,species,Metazoa,Chordata,Actinopteri,Clupeiformes,Clupeidae,Clupea,Clupea pallasii
+ASV62,62,Sebastes,genus,Metazoa,Chordata,Actinopteri,Perciformes,Sebastidae,Sebastes,
