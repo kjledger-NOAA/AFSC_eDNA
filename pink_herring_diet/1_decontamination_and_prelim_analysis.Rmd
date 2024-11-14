@@ -443,6 +443,17 @@ because the insect and the blastn classifiers aren't perfect on their own, i com
 my_tax <- read.csv("asv_taxonomy_pinkherringdiet_custom.csv")
 ```
 
+
+late addition:  let's seperare the salmon ASVs to see how they track... 
+```{r}
+my_tax <- my_tax %>%
+  mutate(taxon = ifelse(representative == "ASV2", "Oncorhynchus_2", taxon)) %>%
+  mutate(taxon = ifelse(representative == "ASV4", "Oncorhynchus_4", taxon)) %>%
+  mutate(taxon = ifelse(representative == "ASV9", "Oncorhynchus_9", taxon)) %>%
+  mutate(taxon = ifelse(representative == "ASV50", "Oncorhynchus_50", taxon))
+```
+
+
 join to taxononmy and group reads by taxon assigment
 ```{r}
 taxon_table <- asv_table_filter4 %>%
@@ -458,11 +469,19 @@ taxon_table <- asv_table_filter4 %>%
 ```
 
 join the sample metadata so that we know which species of fish the sample came from
+
+we had incorrect metadata for 23-5-217. reclassify to Pacific herring
+```{r}
+metadata <- metadata %>%
+  mutate(Species = ifelse(Sample_ID == "e02950", "Pacific herring", Species))
+```
+
 ```{r}
 taxon_table_w_meta <- taxon_table %>%
   left_join(metadata, by = "Sample_ID") %>%
   filter(sample_type != "positive")
 ```
+
 
 
 # Pacific herring 
@@ -555,7 +574,6 @@ how many samples?
 ```{r}
 length(unique(herring_diet$FishID))
 length(unique(herring_diet$Sample_ID))
-
 ```
 
 plot them - number of reads 
@@ -577,6 +595,14 @@ ggplot(aes(x=Sample_ID, y=reads, fill=taxon)) +
 
 plot them - proportion 
 ```{r, fig.height=6}
+#order <- herring_diet %>%
+#  filter(taxon == "Oncorhynchus") %>%
+#  arrange(desc(read_prop))
+
+#h_order <- order$Sample_ID
+
+#herring_diet$Sample_ID <- factor(herring_diet$Sample_ID , levels = h_order)
+
 herring_diet %>%
 ggplot(aes(x=Sample_ID, y=read_prop, fill=taxon)) +
   geom_bar(stat = "identity") + 
@@ -639,7 +665,7 @@ okay, cool. the stomachs with replicate samples that both made it through the fi
 which herring stomachs have salmon reads? 
 ```{r}
 samples_w_salmon <- herring_diet %>%
-  filter(taxon == "Oncorhynchus") %>%
+  filter(genus == "Oncorhynchus") %>%
   filter(reads > 0)
 
 herring_diet %>%
@@ -766,6 +792,14 @@ ggplot(aes(x=Sample_ID, y=reads, fill=taxon)) +
 
 plot them - proportion of reads 
 ```{r, fig.height=6}
+order <- pink_diet %>%
+  filter(taxon == "Clupea pallasii") %>%
+  arrange(desc(read_prop))
+
+p_order <- order$Sample_ID
+
+pink_diet$Sample_ID <- factor(pink_diet$Sample_ID , levels = p_order)
+
 pink_diet %>%
 ggplot(aes(x=Sample_ID, y=read_prop, fill=taxon)) +
   geom_bar(stat = "identity") + 
