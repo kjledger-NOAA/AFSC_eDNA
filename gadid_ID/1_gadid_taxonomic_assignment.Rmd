@@ -1,0 +1,175 @@
+---
+title: "determine taxonomic assignments for gadid ND1 asvs"
+author: "Kimberly Ledger"
+date: "2025-03-21"
+output: github_document
+---
+
+- taxonomic assignment of gadid ND1 metabarcoding reads for Johanna' unknown cod 
+- using dadasnake output from "20250311_gadid_id"
+- using blastn output of ASVs (used ncbi nt db on sedna)  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r load-libraries}
+library(tidyverse)
+library(tidyr)
+library(stringr)
+rename <- dplyr::rename
+```
+
+## load output from taxonkit 
+- this is the fasta seqs from the 20250130 run of dadasnake, and blastn using the ncbi nt database with 96% seq identity and 98% query coverage   
+
+```{r load-output-from-taxonkit}
+taxonomy <-read.delim("/home/kimberly.ledger/AFSC_eDNA/gadid_ID/data/blastn_taxlineage.txt", header = FALSE, na.strings=c(""," ","NA"))
+head(taxonomy)
+```
+
+
+## clean up the header a bit
+```{r}
+# use the full taxonomy rather than the seq id to collapse identical entries
+tax_df <- taxonomy %>%
+  filter(V4 > 100) %>% # make sure all retained matches are >100 bp
+  select(-V2, -V5, -V6, -V7, -V14, -V8, -V9, -V10, -V11, -V12, -V13, -V15, -V16) %>%  #remove unnecessary columns
+  group_by(V1, V17) %>% # group by the sequence key and the full taxonomy to reduce duplicate entries
+  unique() %>% # doing that reduced the number of entries
+  rename(qseqid=V1, perc_id=V3, length=V4, taxonomy=V17) %>% #rename headers
+  filter(perc_id > 98) %>% 
+  filter(!is.na(taxonomy))
+```
+
+## calculate the number of ASV's with taxonomic assignment
+```{r how-many-total-ASVs-w-taxonomy}
+tax_df %>% 
+  ungroup() %>%
+  select(qseqid) %>%
+  unique() %>%
+  nrow
+```
+
+## reformat table 
+```{r}
+# formatting the taxonomy variables
+taxon_df <- tax_df %>%
+  filter(str_detect(taxonomy, ";")) %>%
+  separate(taxonomy, into=c("kingdom", "phylum", "class", "order", "family", "genus", "species"), sep = ";") %>% 
+  filter(!grepl("sp\\.", species, ignore.case = TRUE)) %>%
+  filter(!grepl("cf\\.", species, ignore.case = TRUE)) %>%
+  filter(!grepl("aff\\.", species, ignore.case = TRUE)) %>%
+  filter(!grepl(" x ", species, ignore.case = TRUE)) %>%         ### remove hybrids and unknown species assignments
+  filter(!grepl("synthetic", species, ignore.case = TRUE)) %>%
+  filter(!grepl("uncultured", species, ignore.case = TRUE)) %>%
+  filter(!grepl("\\d", species))
+```
+
+## what non-gadids are here? 
+```{r}
+not_cod <- taxon_df %>%
+  filter(family != "Gadidae") 
+
+unique(not_cod$species)
+```
+none. that's good. 
+
+rename Gadus ogac to Gadus macro
+```{r}
+taxon_df <- taxon_df %>%
+  mutate(species = ifelse(species == "Gadus ogac", "Gadus macrocephalus", species)) 
+```
+
+```{r}
+tax_assignments <- taxon_df %>%
+  select(qseqid, family, genus, species) %>%
+  unique()
+```
+
+all asv's have unique species id. 
+
+```{r}
+#write.csv(tax_assignments, "/home/kimberly.ledger/AFSC_eDNA/gadid_ID/gadid_asv_taxonomic_assignments.csv")
+```
+
+
+now let's figure out which samples have which ASVs 
+
+check sequence table outputs
+```{r}
+asv_table <- readRDS("/home/kimberly.ledger/AFSC_eDNA/gadid_ID/data/filtered.seqTab.RDS") %>%
+  select(!Row.names)
+
+#transpose 
+asv_table <- data.frame(t(asv_table))
+
+#set column names to be ASV# 
+colnames(asv_table) <- asv_table["ASV",]
+
+#remove row that has ASV#
+asv_table <- asv_table[!rownames(asv_table) %in% c('ASV'), ]
+
+#make sure reads are numbers
+# Convert all character columns to numeric
+for (col in names(asv_table)) {
+  asv_table[[col]] <- as.numeric(asv_table[[col]])
+}
+
+asv_table$sample_ID <- rownames(asv_table)  #make make sample ID a column 
+asv_table$sample_ID <- gsub("-", "_", asv_table$sample_ID) #illumina output changed "_" to "-"
+
+#reorder columns and change NTC names to remove extra "_"
+asv_table <- asv_table %>%
+  select(sample_ID, everything())
+
+asv_table[,-1] %>% summarise(across(everything(), sum))
+```
+
+```{r}
+# make a variable for the first and last ASV column in the table
+asv_first <- which(colnames(asv_table) == "ASV_26")  #this is the first asv column in this dataframe
+asv_last <- ncol(asv_table)
+```
+
+pivot table longer 
+```{r}
+asv_table_long <- asv_table %>%
+  pivot_longer(cols = c(asv_first:asv_last), names_to = "ASV", values_to = "reads") %>%
+  mutate(reads = as.numeric(reads)) %>%
+  mutate(reads = ifelse(is.na(reads), 0, reads)) %>%
+  group_by(ASV) %>%
+  mutate(reads_in_ASV = sum(reads))
+
+length(unique(asv_table_long$ASV))
+```
+
+filter to remove ASVs with <100 reads across all samples 
+```{r}
+asv_table_filter1 <- asv_table_long %>%
+  filter(reads_in_ASV > 99)
+```
+
+join to taxonomic assignments 
+```{r}
+taxon_table <- asv_table_filter1 %>%
+  left_join(tax_assignments, by = c("ASV" = "qseqid")) %>%
+  group_by(sample_ID, family, genus, species) %>%
+  summarize(tot_reads = sum(reads))
+```
+
+calculate spp proportions 
+```{r}
+dominate_spp <- taxon_table %>%
+  group_by(sample_ID) %>%
+  mutate(reads_per_sample = sum(tot_reads),
+         proportion = tot_reads/reads_per_sample) %>%
+  filter(proportion > 0.9)
+```
+
+```{r}
+write.csv(dominate_spp, "/home/kimberly.ledger/AFSC_eDNA/gadid_ID/sample_ID.csv")
+```
+
+
