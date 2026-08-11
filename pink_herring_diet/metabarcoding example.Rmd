@@ -1,0 +1,121 @@
+---
+title: "metabarcoding analysis example"
+author: "Kimberly Ledger"
+date: "2024-01-11"
+output: html_document
+---
+## Load libraries and data 
+
+load libraries 
+```{r, message=FALSE}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+```
+
+load ASV table and metadata
+```{r}
+asv_table <- readRDS("/home/kimberly.ledger/AFSC_eDNA/pink_herring_diet/filtered.seqTab.RDS") %>%
+  select(!Row.names)
+
+#transpose 
+asv_table <- data.frame(t(asv_table))
+
+#set column names to be ASV# 
+colnames(asv_table) <- asv_table["ASV",]
+
+#remove extra row with ASV ID 
+asv_table <- asv_table[-144,] 
+
+#make sure reads are numbers
+# Convert all character columns to numeric
+for (col in names(asv_table)) {
+  asv_table[[col]] <- as.numeric(asv_table[[col]])
+}
+
+#make sample ID a column 
+asv_table$Sample_ID <- rownames(asv_table)
+asv_table$Sample_ID <- as.factor(asv_table$Sample_ID)
+```
+
+### replace ASVs with taxonomic assignments
+
+because the insect and the blastn classifiers aren't perfect on their own, i combined the outputs by hand for our remaining ASVs
+```{r}
+my_tax <- read.csv("pink_herring_diet/asv_taxonomy_pinkherringdiet_custom.csv")
+```
+
+
+join to taxononmy and group reads by taxon assigment - this removes ASVs without a taxonomic assignment 
+```{r}
+taxon_table <- asv_table %>%
+  pivot_longer(cols = c(1:411), names_to = "ASV", values_to = "reads") %>%  ## change column numbers in asv_table minus one (for the Sample_ID)
+  separate(ASV, into = c("ASV_label", "ASV_num"), remove = F) %>% ## this line and the next are only needed it your ASV IDs do not match (i.e. ASV0001 in asv_table and ASV1 in taxonomic table)
+  mutate(ASV_num = as.integer(ASV_num)) %>%     
+  left_join(my_tax, by = "ASV_num") %>%       ## otherwise, join by "ASV"
+  select(!ASV_label) %>%
+  select(!ASV_num) %>% 
+  select(!representative) %>%
+  group_by(Sample_ID, taxon, rank, order, family, genus, species) %>%
+  summarize(reads = sum(reads)) %>%
+  filter(!is.na(taxon))
+```
+
+### join metadata to asv table 
+
+```{r}
+metadata <- read.csv("/home/kimberly.ledger/AFSC_eDNA/pink_herring_diet/pinkherring_diet_metadata.csv") %>%
+  dplyr::rename(Sample_ID = extraction_ID)
+
+#illumina output changed "_" to "-"
+metadata$Sample_ID <- gsub("_", "-", metadata$Sample_ID) 
+
+taxon_table_with_metadata <- metadata %>%
+  left_join(taxon_table, by = "Sample_ID")
+```
+
+
+### plot
+
+let's start by visualizing the reads - absolute number of reads   
+```{r}
+taxon_table_with_metadata %>%
+  #filter(sample_type == "positive") %>%  can filter dataframe here to plot less sampels at one time
+  ggplot(aes(x=Sample_ID, y=reads, fill=taxon)) +
+  geom_bar(stat = "identity") + 
+    theme_bw() +
+  labs(
+    y = "number of sequencing reads",
+    x = "sample ID",
+    title = "") + 
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 0.95),
+    legend.text = element_text(size = 8),
+    legend.key.size = unit(0.3, "cm"),
+    legend.position = "none",  # too many asvs to plot entire 
+    legend.title = element_blank()
+  )
+```
+
+plot them - proportion 
+```{r, fig.height=6}
+ taxon_table_with_metadata %>%
+  #filter(sample_type == "positive") %>%  can filter dataframe here to plot less sampels at one time 
+  group_by(Sample_ID) %>%
+  mutate(ReadsPerSample = sum(reads)) %>%
+  mutate(read_prop = reads/ReadsPerSample) %>% 
+  ggplot(aes(x=Sample_ID, y=read_prop, fill=taxon)) +
+  geom_bar(stat = "identity") + 
+    theme_bw() + 
+   labs(
+    y = "proportion of sequencing reads",
+    x = "sample ID",
+    title = "")  +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 0.95),
+    legend.position = "right",
+    legend.text = element_text(size = 6),
+    legend.title = element_blank()
+  )  
+```
+
